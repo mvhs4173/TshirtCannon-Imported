@@ -4,8 +4,13 @@
 
 package frc.robot;
 
+import java.security.DrbgParameters.Reseed;
+
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkBase.PersistMode;
+import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.Encoder;
@@ -16,6 +21,12 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
+import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -35,6 +46,9 @@ public class Robot extends TimedRobot {
   private double normalSpeed = 0.2; //normal speed to drive (when boost is not pressed)
 
   XboxController m_Controller = new XboxController(0);
+
+  SparkMaxConfig m_leftMotorConfig = new SparkMaxConfig();
+  SparkMaxConfig m_rightMotorConfig = new SparkMaxConfig();
 
   SparkMax m_frontLeftMotor = new SparkMax(0, MotorType.kBrushed);
   SparkMax m_frontRightMotor = new SparkMax(1, MotorType.kBrushed);
@@ -67,6 +81,12 @@ public class Robot extends TimedRobot {
     SmartDashboard.putData("Auto choices", m_chooser);
     m_Compressor.enableDigital();
     m_BarrelOneSolenoid.setPulseDuration(pulseDuration);
+    m_leftMotorConfig.inverted(false);
+    m_rightMotorConfig.inverted(true);
+    m_frontLeftMotor.configure(m_leftMotorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+    m_backLeftMotor.configure(m_leftMotorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+    m_frontRightMotor.configure(m_rightMotorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+    m_backRightMotor.configure(m_rightMotorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
     //going to invert the right side motors next time
   }
 
@@ -93,6 +113,12 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousInit() {
     m_autoSelected = m_chooser.getSelected();
+    double maxSpeed = 1;
+    double driveTimeAutonomous = 10 / (maxSpeed * 0.2);
+    Command auto = new ParallelRaceGroup(
+      new RunCommand(()-> {m_MecanumDrive.driveCartesian(0.2, 0.0, 0.0);}, null),
+      new WaitCommand(driveTimeAutonomous))
+      .andThen(new InstantCommand(()-> {m_MecanumDrive.driveCartesian(0.0, 0.0, 0.0);}));
     // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
     System.out.println("Auto selected: " + m_autoSelected);
   }
@@ -102,7 +128,7 @@ public class Robot extends TimedRobot {
   public void autonomousPeriodic() {
     switch (m_autoSelected) {
       case kCustomAuto:
-        // Put custom auto code here
+        
         break;
       case kDefaultAuto:
       default:
@@ -133,6 +159,9 @@ public class Robot extends TimedRobot {
     double leftRight = m_Controller.getLeftX();
     double rotation = m_Controller.getRightX();
     boolean boost = m_Controller.getRightBumperButton();
+    forwardBackward *= Math.abs(forwardBackward) > 0.2 ? 1 : 0;
+    leftRight *= Math.abs(leftRight) > 0.2 ? 1 : 0;
+    rotation *= Math.abs(rotation) > 0.2 ? 1 : 0;
     forwardBackward *= boost ? boostSpeed : normalSpeed;
     leftRight *= boost ? boostSpeed : normalSpeed;
     rotation *= boost ? boostSpeed : normalSpeed;
@@ -155,6 +184,13 @@ public class Robot extends TimedRobot {
 
 
     }
+
+    SmartDashboard.putData(m_MecanumDrive);
+    SmartDashboard.putNumber("Back left motor", m_backLeftMotor.get());
+    SmartDashboard.putNumber("Back right motor", m_backRightMotor.get());
+    SmartDashboard.putNumber("front left motor", m_frontLeftMotor.get());
+    SmartDashboard.putNumber("front Right motor", m_frontRightMotor.get());
+    
   }
 
   /** This function is called once when the robot is disabled. */
