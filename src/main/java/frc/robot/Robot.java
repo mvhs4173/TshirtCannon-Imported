@@ -6,6 +6,7 @@ package frc.robot;
 
 import java.security.DrbgParameters.Reseed;
 
+import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
@@ -62,10 +63,10 @@ public class Robot extends TimedRobot {
 
   Compressor m_Compressor = new Compressor(PneumaticsModuleType.REVPH);
 
-  Encoder m_frontLeftEncoder = new Encoder(0, 1);
-  Encoder m_frontRightEncoder = new Encoder(2,3);
-  Encoder m_backLeftEncoder = new Encoder(4,5);
-  Encoder m_backRightEncoder = new Encoder(6,7);
+  RelativeEncoder m_frontLeftEncoder = m_frontLeftMotor.getEncoder();
+  RelativeEncoder m_frontRightEncoder = m_frontRightMotor.getEncoder();
+  RelativeEncoder m_backLeftEncoder = m_backLeftMotor.getEncoder();
+  RelativeEncoder m_backRightEncoder = m_backRightMotor.getEncoder();
 
   MecanumDrive m_MecanumDrive = new MecanumDrive(m_frontLeftMotor,
    m_backLeftMotor, m_frontRightMotor, m_backRightMotor);
@@ -144,10 +145,10 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-    double frontLeftRate = m_frontLeftEncoder.getRate();
-    double frontRightRate = m_frontRightEncoder.getRate();
-    double backLeftRate = m_backLeftEncoder.getRate();
-    double backRightRate = m_backRightEncoder.getRate();
+    double frontLeftRate = m_frontLeftEncoder.getVelocity();
+    double frontRightRate = m_frontRightEncoder.getVelocity();
+    double backLeftRate = m_backLeftEncoder.getVelocity();
+    double backRightRate = m_backRightEncoder.getVelocity();
 
     SmartDashboard.putNumber("frontLeftRate", frontLeftRate);
     SmartDashboard.putNumber("frontRightRate", frontRightRate);
