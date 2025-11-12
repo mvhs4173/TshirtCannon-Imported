@@ -6,6 +6,8 @@ package frc.robot;
 
 import java.security.DrbgParameters.Reseed;
 
+import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkBase.PersistMode;
@@ -43,18 +45,19 @@ public class Robot extends TimedRobot {
 
   private int shotCount = 0; //Increments with each shot to use different barrels with the same button
   private final double pulseDuration = 1.0; //length (seconds) for solenoids to fire
+
   private double boostSpeed = 1.0; //speed to drive when boost (right bumper) is pressed
   private double normalSpeed = 0.2; //normal speed to drive (when boost is not pressed)
 
   XboxController m_Controller = new XboxController(0);
 
-  SparkMaxConfig m_leftMotorConfig = new SparkMaxConfig();
-  SparkMaxConfig m_rightMotorConfig = new SparkMaxConfig();
+  WPI_TalonSRX m_frontLeftMotor = new WPI_TalonSRX(10);
+  WPI_TalonSRX m_frontRightMotor = new WPI_TalonSRX(11);
+  WPI_TalonSRX m_backLeftMotor = new WPI_TalonSRX(12);
+  WPI_TalonSRX m_backRightMotor = new WPI_TalonSRX(13);
 
-  SparkMax m_frontLeftMotor = new SparkMax(0, MotorType.kBrushed);
-  SparkMax m_frontRightMotor = new SparkMax(1, MotorType.kBrushed);
-  SparkMax m_backLeftMotor = new SparkMax(2, MotorType.kBrushed);
-  SparkMax m_backRightMotor = new SparkMax(3, MotorType.kBrushed);
+  final double encoderPositionMultiplier = 1.0/10.0;
+  final double encoderVelocityMultiplier = 1.0/10.0;//360max
 
   Solenoid m_BarrelOneSolenoid = new Solenoid(PneumaticsModuleType.REVPH, 0);
   Solenoid m_BarrelTwoSolenoid = new Solenoid(PneumaticsModuleType.REVPH, 1);
@@ -62,11 +65,6 @@ public class Robot extends TimedRobot {
   Solenoid m_BarrelFourSolenoid = new Solenoid(PneumaticsModuleType.REVPH, 3);
 
   Compressor m_Compressor = new Compressor(PneumaticsModuleType.REVPH);
-
-  RelativeEncoder m_frontLeftEncoder = m_frontLeftMotor.getEncoder();
-  RelativeEncoder m_frontRightEncoder = m_frontRightMotor.getEncoder();
-  RelativeEncoder m_backLeftEncoder = m_backLeftMotor.getEncoder();
-  RelativeEncoder m_backRightEncoder = m_backRightMotor.getEncoder();
 
   MecanumDrive m_MecanumDrive = new MecanumDrive(m_frontLeftMotor,
    m_backLeftMotor, m_frontRightMotor, m_backRightMotor);
@@ -82,13 +80,11 @@ public class Robot extends TimedRobot {
     SmartDashboard.putData("Auto choices", m_chooser);
     m_Compressor.enableDigital();
     m_BarrelOneSolenoid.setPulseDuration(pulseDuration);
-    m_leftMotorConfig.inverted(false);
-    m_rightMotorConfig.inverted(true);
-    m_frontLeftMotor.configure(m_leftMotorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
-    m_backLeftMotor.configure(m_leftMotorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
-    m_frontRightMotor.configure(m_rightMotorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
-    m_backRightMotor.configure(m_rightMotorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
-    //going to invert the right side motors next time
+    m_frontLeftMotor.setInverted(false);
+    m_frontRightMotor.setInverted(true);
+    m_backLeftMotor.setInverted(false);
+    m_backRightMotor.setInverted(true);
+       //going to invert the right side motors next time
   }
 
   /**
@@ -145,10 +141,10 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-    double frontLeftRate = m_frontLeftEncoder.getVelocity();
-    double frontRightRate = m_frontRightEncoder.getVelocity();
-    double backLeftRate = m_backLeftEncoder.getVelocity();
-    double backRightRate = m_backRightEncoder.getVelocity();
+    double frontLeftRate = m_frontLeftMotor.getSelectedSensorVelocity() * encoderVelocityMultiplier;
+    double frontRightRate = m_frontRightMotor.getSelectedSensorVelocity() * encoderVelocityMultiplier;
+    double backLeftRate = m_backLeftMotor.getSelectedSensorVelocity() * encoderVelocityMultiplier;
+    double backRightRate = m_backRightMotor.getSelectedSensorVelocity() * encoderVelocityMultiplier;
 
     SmartDashboard.putNumber("frontLeftRate", frontLeftRate);
     SmartDashboard.putNumber("frontRightRate", frontRightRate);
@@ -179,11 +175,9 @@ public class Robot extends TimedRobot {
       } else if(shotCount == 3){
         m_BarrelFourSolenoid.startPulse();
       }
-
+      
       shotCount++;
       shotCount %= 4;
-
-
     }
 
     SmartDashboard.putData(m_MecanumDrive);
@@ -192,6 +186,10 @@ public class Robot extends TimedRobot {
     SmartDashboard.putNumber("front left motor", m_frontLeftMotor.get());
     SmartDashboard.putNumber("front Right motor", m_frontRightMotor.get());
     
+    SmartDashboard.putNumber("BLAmps", m_backLeftMotor.getStatorCurrent());
+    SmartDashboard.putNumber("BRAmps", m_backRightMotor.getStatorCurrent());
+    SmartDashboard.putNumber("FLAmps", m_frontLeftMotor.getStatorCurrent());
+    SmartDashboard.putNumber("FRAmps", m_frontRightMotor.getStatorCurrent());
   }
 
   /** This function is called once when the robot is disabled. */
